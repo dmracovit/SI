@@ -1,0 +1,32 @@
+# PlatformIO build artifacts
+.pio/
+.vscode/
+
+# Compiled files
+*.o
+*.elf
+*.hex
+*.bin
+
+# Images
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+*.svg
+
+# Documents
+*.pdf
+*.docx
+*.doc
+*.pptx
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Archives
+*.zip
+*.tar.gz
+*.rar
