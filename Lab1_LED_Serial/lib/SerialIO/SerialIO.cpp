@@ -35,7 +35,6 @@ void SerialIoInit(void)
     fdev_setup_stream(&uartStdin, NULL, uartGetchar, _FDEV_SETUP_READ);
     stdin = &uartStdin;
 
-    SerialPrintWelcome();
 }
 
 void SerialPrint(const char *format, ...)
@@ -53,6 +52,7 @@ int SerialReadLine(char *buffer, int maxLength)
     {
         if (c == '\n' || c == '\r')
         {
+            putchar('\n');
             if (lineIndex > 0)
             {
                 lineBuffer[lineIndex] = '\0';
@@ -65,21 +65,9 @@ int SerialReadLine(char *buffer, int maxLength)
         }
         else if (lineIndex < INPUT_BUFFER_SIZE - 1)
         {
+            putchar(c);
             lineBuffer[lineIndex++] = (char)c;
         }
     }
     return 0;
-}
-
-void SerialPrintWelcome(void)
-{
-    printf("\n=================================\n");
-    printf("Lab 1.1 - LED Control via Serial\n");
-    printf("=================================\n");
-    printf("Commands:\n");
-    printf("  led on    - Turn LED on\n");
-    printf("  led off   - Turn LED off\n");
-    printf("  led blink - Blink LED every 500ms\n");
-    printf("=================================\n\n");
-    printf("System ready. Waiting for commands...\n");
 }

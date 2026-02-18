@@ -9,6 +9,5 @@
 void SerialIoInit(void);
 void SerialPrint(const char *format, ...);
 int SerialReadLine(char *buffer, int maxLength);
-void SerialPrintWelcome(void);
 
 #endif
