@@ -54,10 +54,7 @@ int KeypadReadCode(char *buffer, int maxLen)
 {
     LcdSetCursor(0, 1);
 
-    char fmt[8];
-    sprintf(fmt, "%%%ds", maxLen);   // build format string e.g. "%4s"
-
-    int result = scanf(fmt, buffer); // reads from keypad stdin until '\n' (#)
+    int result = scanf("%s", buffer); // reads from keypad stdin until '\n' (#)
 
     return (result == 1) ? strlen(buffer) : 0;
 }
