@@ -1,19 +1,17 @@
 #include "SerialIO.h"
 #include <stdio.h>
 
-/* stdout → Serial TX */
 static int uartPutchar(char c, FILE *stream)
 {
     Serial.write(c);
     return 0;
 }
 
-/* stdin → Serial RX (blocking: waits until a character is available) */
 static int uartGetchar(FILE *stream)
 {
     while (!Serial.available()) { ; }
     int c = Serial.read();
-    Serial.write(c); // echo back so the user sees what they type
+    Serial.write(c);
     return c;
 }
 

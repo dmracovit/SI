@@ -1,11 +1,6 @@
 #ifndef GPIO_DRIVER_H
 #define GPIO_DRIVER_H
 
-/* MCAL - GpioDriver
- * Thin abstraction over Arduino GPIO functions.
- * All higher layers must use these wrappers instead of calling
- * pinMode/digitalWrite/digitalRead directly.
- */
 
 #include <Arduino.h>
 

@@ -20,7 +20,6 @@ void TaskReporter_Run(void)
     printf("Avg duration:    %lu ms\n", avgDur);
     printf("==================\n");
 
-    /* Reset all statistics for the next interval */
     Signals_SetTotalPresses(0);
     Signals_SetShortPresses(0);
     Signals_SetLongPresses(0);

@@ -1,26 +1,13 @@
 #ifndef SCHEDULER_H
 #define SCHEDULER_H
 
-/* SRV - Scheduler
- * Non-preemptive bare-metal sequential task scheduler.
- *
- * Each task has a recurrence (period in ms) and an offset (initial delay).
- * The ISR (Timer1, 1ms tick) calls Scheduler_Loop() which decrements each
- * task's counter and executes the task when the counter reaches zero.
- *
- * Task table:
- *   TASK_BUTTON_MONITOR  rec=20ms   offset=0ms
- *   TASK_STATISTICS      rec=100ms  offset=5ms
- *   TASK_REPORTER        rec=10000ms offset=10ms
- */
-
 #include <Arduino.h>
 
 typedef struct {
-    void (*task_func)(void); // pointer to the task function
-    int rec;                  // recurrence period in ms
-    int offset;               // initial delay in ms (for staggering task starts)
-    int rec_cnt;              // current countdown (decremented each tick)
+    void (*task_func)(void);
+    int rec;
+    int offset;
+    int rec_cnt;
 } Task_t;
 
 enum {
@@ -39,7 +26,7 @@ enum {
 #define OFFS_REPORTER        10
 
 void Scheduler_Init(void);
-void Scheduler_Start(void);  // starts Timer1 and enables global interrupts
-void Scheduler_Loop(void);   // called from ISR every 1ms
+void Scheduler_Start(void);
+void Scheduler_Loop(void);
 
 #endif

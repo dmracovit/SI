@@ -12,7 +12,7 @@ static void Scheduler_TaskInit(Task_t *task, void (*func)(void), int rec, int of
     task->task_func = func;
     task->rec       = rec;
     task->offset    = offset;
-    task->rec_cnt   = offset; // start counting from offset (initial delay)
+    task->rec_cnt   = offset;
 }
 
 void Scheduler_Init(void)
@@ -27,8 +27,8 @@ void Scheduler_Init(void)
 
 void Scheduler_Start(void)
 {
-    TimerDriver_Init(); // configure Timer1 CTC 1ms
-    sei();              // enable global interrupts → ISR starts firing
+    TimerDriver_Init();
+    sei();
 }
 
 void Scheduler_Loop(void)
@@ -37,8 +37,8 @@ void Scheduler_Loop(void)
     {
         if (--tasks[i].rec_cnt <= 0)
         {
-            tasks[i].rec_cnt = tasks[i].rec; // reset counter to recurrence period
-            tasks[i].task_func();            // execute the task
+            tasks[i].rec_cnt = tasks[i].rec;
+            tasks[i].task_func();
         }
     }
 }

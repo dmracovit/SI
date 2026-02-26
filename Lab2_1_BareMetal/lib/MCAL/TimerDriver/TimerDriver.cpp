@@ -6,13 +6,13 @@
 void TimerDriver_Init(void)
 {
     TCCR1A = 0;
-    TCCR1B = (1 << WGM12) | (1 << CS11) | (1 << CS10); // CTC mode, prescaler 64
-    OCR1A  = 249;                                         // 16MHz/64/250 = 1ms
+    TCCR1B = (1 << WGM12) | (1 << CS11) | (1 << CS10);
+    OCR1A  = 249;
     TIMSK1 = (1 << OCIE1A);
 }
 
 ISR(TIMER1_COMPA_vect)
 {
-    sei();             // re-enable interrupts so USART TX can fire (needed for printf)
+    sei();
     Scheduler_Loop();
 }

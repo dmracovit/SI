@@ -12,7 +12,6 @@ static int16_t     blinkTogglesRemaining = 0;
 
 void TaskStatistics_Run(void)
 {
-    /* Check for new press in ANY state — never miss a press during blinking */
     if (Signals_GetNewPressFlag())
     {
         uint16_t duration = Signals_GetLastPressDuration();
@@ -24,20 +23,19 @@ void TaskStatistics_Run(void)
         {
             Signals_SetShortPresses(Signals_GetShortPresses() + 1);
             Signals_SetTotalShortDuration(Signals_GetTotalShortDuration() + duration);
-            blinkTogglesRemaining = 10; // 5 blinks = 10 toggles × 100ms = 1s
+            blinkTogglesRemaining = 10;
         }
         else
         {
             Signals_SetLongPresses(Signals_GetLongPresses() + 1);
             Signals_SetTotalLongDuration(Signals_GetTotalLongDuration() + duration);
-            blinkTogglesRemaining = 20; // 10 blinks = 20 toggles × 100ms = 2s
+            blinkTogglesRemaining = 20;
         }
 
         Signals_SetNewPressFlag(false);
         state = STATE_BLINKING;
     }
 
-    /* Handle yellow LED blinking */
     if (state == STATE_BLINKING)
     {
         LedDriver_YellowToggle();
