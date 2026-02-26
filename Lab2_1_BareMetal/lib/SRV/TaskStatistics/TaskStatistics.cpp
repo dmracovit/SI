@@ -7,16 +7,16 @@ typedef enum {
     STATE_BLINKING
 } StatState_t;
 
-static StatState_t state = STATE_IDLE;
-static int16_t blinkTogglesRemaining = 0;
+static StatState_t state               = STATE_IDLE;
+static int16_t     blinkTogglesRemaining = 0;
 
 void TaskStatistics_Run(void)
 {
-    // Check for new press in ANY state (don't miss presses during blinking)
+    /* Check for new press in ANY state — never miss a press during blinking */
     if (Signals_GetNewPressFlag())
     {
         uint16_t duration = Signals_GetLastPressDuration();
-        bool isShort = Signals_GetIsShortPress();
+        bool     isShort  = Signals_GetIsShortPress();
 
         Signals_SetTotalPresses(Signals_GetTotalPresses() + 1);
 
@@ -24,20 +24,20 @@ void TaskStatistics_Run(void)
         {
             Signals_SetShortPresses(Signals_GetShortPresses() + 1);
             Signals_SetTotalShortDuration(Signals_GetTotalShortDuration() + duration);
-            blinkTogglesRemaining = 10; // 5 blinks = 10 toggles
+            blinkTogglesRemaining = 10; // 5 blinks = 10 toggles × 100ms = 1s
         }
         else
         {
             Signals_SetLongPresses(Signals_GetLongPresses() + 1);
             Signals_SetTotalLongDuration(Signals_GetTotalLongDuration() + duration);
-            blinkTogglesRemaining = 20; // 10 blinks = 20 toggles
+            blinkTogglesRemaining = 20; // 10 blinks = 20 toggles × 100ms = 2s
         }
 
         Signals_SetNewPressFlag(false);
         state = STATE_BLINKING;
     }
 
-    // Handle blinking
+    /* Handle yellow LED blinking */
     if (state == STATE_BLINKING)
     {
         LedDriver_YellowToggle();
