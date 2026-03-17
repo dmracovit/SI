@@ -1,11 +1,13 @@
 #include "TaskConditioning.h"
 #include "SensorData.h"
+#include "SignalFilter.h"
 #include "LedDriver.h"
 
-// Conditioning is semaphore-driven: runs immediately when Acquisition signals new data.
+// Filter states — persistent across calls (one per sensor channel)
+static FilterState_t tempFilter;
+static FilterState_t soundFilter;
 
 // Helper: apply hysteresis + debounce for one sensor channel.
-// Returns the confirmed alert state after processing.
 static AlertState_t ProcessChannel(
     float value, float threshHigh, float threshLow,
     AlertState_t currentAlert, uint8_t *debounce)
@@ -38,9 +40,12 @@ static AlertState_t ProcessChannel(
 
 void TaskConditioning_Task(void *pvParameters)
 {
+    SignalFilter_Init(&tempFilter);
+    SignalFilter_Init(&soundFilter);
+
     for (;;)
     {
-        // Block until Acquisition signals new data (timeout = 200ms as watchdog)
+        // Block until Acquisition signals new data
         if (xSemaphoreTake(xSemNewData, pdMS_TO_TICKS(200)) != pdTRUE)
         {
             continue;
@@ -49,37 +54,47 @@ void TaskConditioning_Task(void *pvParameters)
         // ===== Temperature channel (digital) =====
         if (SensorData_IsTempValid())
         {
-            float temp = SensorData_GetTemperature();
+            float rawTemp = SensorData_GetTemperature();
+
+            // Signal conditioning pipeline: saturate → median → EMA
+            float filtered = SignalFilter_Process(
+                &tempFilter, rawTemp, TEMP_SAT_MIN, TEMP_SAT_MAX);
+            SensorData_SetTempFiltered(filtered);
+
+            // Threshold alerting uses FILTERED value
             AlertState_t tAlert = SensorData_GetTempAlert();
             uint8_t tDbg = SensorData_GetTempDebounce();
 
             AlertState_t newTAlert = ProcessChannel(
-                temp, TEMP_THRESH_HIGH, TEMP_THRESH_LOW, tAlert, &tDbg);
+                filtered, TEMP_THRESH_HIGH, TEMP_THRESH_LOW, tAlert, &tDbg);
 
             SensorData_SetTempDebounce(tDbg);
-            if (tDbg > 0) printf("[DBG] Temp=%.1f dbg=%d/%d\n", temp, tDbg, DEBOUNCE_COUNT);
             if (newTAlert != tAlert)
             {
-                printf("[DBG] Temp ALERT changed: %s\n", newTAlert == ALERT_ON ? "ON" : "OFF");
                 SensorData_SetTempAlert(newTAlert);
             }
         }
 
         // ===== Sound channel (analog) =====
         {
-            int snd = SensorData_GetSoundLevel();
+            int rawSnd = SensorData_GetSoundLevel();
+
+            // Signal conditioning pipeline: saturate → median → EMA
+            float filtered = SignalFilter_Process(
+                &soundFilter, (float)rawSnd, (float)SOUND_SAT_MIN, (float)SOUND_SAT_MAX);
+            SensorData_SetSoundFiltered(filtered);
+
+            // Threshold alerting uses FILTERED value
             AlertState_t sAlert = SensorData_GetSoundAlert();
             uint8_t sDbg = SensorData_GetSoundDebounce();
 
             AlertState_t newSAlert = ProcessChannel(
-                (float)snd, (float)SOUND_THRESH_HIGH, (float)SOUND_THRESH_LOW,
+                filtered, (float)SOUND_THRESH_HIGH, (float)SOUND_THRESH_LOW,
                 sAlert, &sDbg);
 
             SensorData_SetSoundDebounce(sDbg);
-            if (sDbg > 0) printf("[DBG] Snd=%d dbg=%d/%d\n", snd, sDbg, DEBOUNCE_COUNT);
             if (newSAlert != sAlert)
             {
-                printf("[DBG] Sound ALERT changed: %s\n", newSAlert == ALERT_ON ? "ON" : "OFF");
                 SensorData_SetSoundAlert(newSAlert);
             }
         }
