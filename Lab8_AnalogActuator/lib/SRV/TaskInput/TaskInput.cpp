@@ -3,15 +3,20 @@
 #include "JoystickDriver.h"
 #include <Arduino.h>
 #include <string.h>
+#include <stdio.h>
 
 static char serialBuf[32];
 static uint8_t serialIdx = 0;
 
+// Uses getchar() (STDIO) for reading, putchar() for echo
 static void processSerialInput(void)
 {
     while (Serial.available() > 0) {
-        char c = (char)Serial.read();
-        Serial.write(c);
+        int ch = getchar();              // STDIO input
+        if (ch == EOF) break;
+
+        char c = (char)ch;
+        putchar(c);                      // STDIO echo
 
         if (c == '\n' || c == '\r') {
             if (serialIdx > 0) {
