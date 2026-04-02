@@ -4,7 +4,6 @@
 #include "SignalConditioner.h"
 #include "ServoDriver.h"
 #include "RelayDriver.h"
-#include "LedDriver.h"
 
 static FilterState_t servoFilter;
 static CondState_t   relayCond;
@@ -56,9 +55,6 @@ void TaskConditioning_Task(void *pvParameters)
         if (ramped >= ANGLE_MAX - 0.5f) alert |= ALERT_LIMIT_HI;
         if (fabsf(ramped - filtered) > 1.0f) alert |= ALERT_RAMPING;
         AppState_SetAlert(alert);
-
-        // LED: on when ramping
-        LedDriver_Set((alert & ALERT_RAMPING) != 0);
 
         vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(CONDITIONING_TASK_PERIOD_MS));
     }

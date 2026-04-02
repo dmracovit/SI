@@ -1,7 +1,6 @@
 #include <Arduino.h>
 #include "SerialIO.h"
 #include "LcdDisplay.h"
-#include "LedDriver.h"
 #include "ServoDriver.h"
 #include "RelayDriver.h"
 #include "JoystickDriver.h"
@@ -15,7 +14,6 @@ void setup()
 {
     SerialIoInit();
     LcdDisplay_Init();
-    LedDriver_Init();
     ServoDriver_Init();
     RelayDriver_Init();
     JoystickDriver_Init();
@@ -28,7 +26,6 @@ void setup()
     printf("Analog  : Servo on GPIO%d (PWM)\n", SERVO_PIN);
     printf("Joystick: X=GPIO%d Y=GPIO%d SW=GPIO%d\n",
            JOYSTICK_X_PIN, JOYSTICK_Y_PIN, JOYSTICK_SWITCH_PIN);
-    printf("LED     : GPIO%d\n", LED_PIN);
     printf("LCD     : I2C 0x%02X\n", LCD_ADDR);
     printf("Servo   : %.0f-%.0f deg, ramp %.1f deg/cycle\n",
            ANGLE_MIN, ANGLE_MAX, RAMP_STEP);
