@@ -8,15 +8,27 @@
 static char serialBuf[32];
 static uint8_t serialIdx = 0;
 
-// Uses getchar() (STDIO) for reading, putchar() for echo
+// STDIO-compatible wrappers over Serial
+// getchar() equivalent — non-blocking, returns EOF if nothing available
+static int stdio_getchar(void)
+{
+    if (Serial.available() > 0)
+        return Serial.read();
+    return EOF;
+}
+
+// putchar() equivalent
+static void stdio_putchar(char c)
+{
+    putchar(c);
+}
+
 static void processSerialInput(void)
 {
-    while (Serial.available() > 0) {
-        int ch = getchar();              // STDIO input
-        if (ch == EOF) break;
-
+    int ch;
+    while ((ch = stdio_getchar()) != EOF) {
         char c = (char)ch;
-        putchar(c);                      // STDIO echo
+        stdio_putchar(c);  // echo via putchar (STDIO)
 
         if (c == '\n' || c == '\r') {
             if (serialIdx > 0) {
