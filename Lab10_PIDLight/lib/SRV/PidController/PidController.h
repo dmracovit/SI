@@ -1,19 +1,25 @@
 #pragma once
 #include <Arduino.h>
 
+// Discrete PID with two enhancements over the textbook form:
+//   1) Derivative term is computed on the MEASUREMENT (not the error) so
+//      that step-changes of the setpoint do not produce a derivative kick.
+//   2) Saturation is handled by BACK-CALCULATION anti-windup, where the
+//      excess between the unconstrained and the saturated output is fed
+//      back into the integrator at a configurable tracking rate Kt.
 typedef struct {
-    float integral;
-    float prevError;
-    float dt;          // seconds
-    bool  firstRun;
-} PidState_t;
+    float    accumI;       // Ki·∫e (already pre-multiplied by Ki)
+    float    prevMeas;     // last measurement, for derivative-on-measurement
+    float    dtSec;        // sample period in seconds
+    uint8_t  primed;       // 0 until prevMeas seeded
+} PidController_t;
 
-void  PidController_Init(PidState_t *s, float dtSec);
-void  PidController_Reset(PidState_t *s);
+#define PID_TRACKING_GAIN  1.0f   // back-calculation rate (1/seconds)
 
-// Compute PID output. Output is unbounded — caller saturates.
-//   error = setpoint - measured
-//   out = Kp*err + Ki*integral + Kd*derivative
-float PidController_Compute(PidState_t *s, float setpoint, float measured,
-                            float kp, float ki, float kd,
-                            float outMin, float outMax);
+void  PidController_Init(PidController_t *ctx, float dtSec);
+void  PidController_Reset(PidController_t *ctx);
+
+float PidController_Compute(PidController_t *ctx,
+                             float setpoint, float measurement,
+                             float kp, float ki, float kd,
+                             float outMin, float outMax);

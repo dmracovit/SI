@@ -2,17 +2,34 @@
 #include "AppState.h"
 #include "LdrSensor.h"
 
-// Reads LDR, applies EMA filter, stores in AppState.
+// Sensor task: read the photoresistor, smooth it, hand the result to the
+// controller via AppState.
+//
+// The EMA is written in its incremental form
+//
+//      filtered  ←  filtered + α · (sample - filtered)
+//
+// which is algebraically identical to  α·sample + (1-α)·filtered  but
+// requires only one multiplication and avoids accumulating round-off
+// error from the (1-α) factor.
+
 void TaskSensor_Task(void *pvParameters)
 {
-    TickType_t xLastWakeTime = xTaskGetTickCount();
-    float emaValue = LdrSensor_ReadPercent();  // seed with first reading
+    (void)pvParameters;
 
-    for (;;) {
-        float raw = LdrSensor_ReadPercent();
-        emaValue = LDR_EMA_ALPHA * raw + (1.0f - LDR_EMA_ALPHA) * emaValue;
-        AppState_SetLight(emaValue);
+    // Seed the filter with the first reading so the controller does not
+    // see a 0 → real_value step on the very first cycle.
+    float smoothed = LdrSensor_ReadPercent();
+    AppState_SetLight(smoothed);
 
-        vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(SENSOR_TASK_PERIOD_MS));
+    TickType_t cycleStart = xTaskGetTickCount();
+
+    for (;;)
+    {
+        const float fresh = LdrSensor_ReadPercent();
+        smoothed += LDR_EMA_ALPHA * (fresh - smoothed);
+        AppState_SetLight(smoothed);
+
+        vTaskDelayUntil(&cycleStart, pdMS_TO_TICKS(SENSOR_TASK_PERIOD_MS));
     }
 }

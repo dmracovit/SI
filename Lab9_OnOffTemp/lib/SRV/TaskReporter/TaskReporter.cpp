@@ -51,14 +51,14 @@ void TaskReporter_Task(void *pvParameters)
         LcdDisplay_PrintAt(0, 1, row1);
 
         // ===== Teleplot output (printf, STDIO) =====
-        // One line per variable, `>Name:value` — drag any onto a chart.
-        // Relay is scaled to setpoint so it overlays the temperature trace.
-        float relayPlot = relay ? sp : 0.0f;
-        printf(">Temp:%.2f\n",     valid ? temp : 0.0f);
-        printf(">SetPoint:%.2f\n", sp);
-        printf(">Lo:%.2f\n",       lo);
-        printf(">Hi:%.2f\n",       hi);
-        printf(">Relay:%.2f\n",    relayPlot);
+        // One line per variable; drag any of them onto a chart in Teleplot.
+        // RelayTrace is scaled to the setpoint so it overlays the temp curve.
+        float relayTrace = relay ? sp : 0.0f;
+        printf(">Temp:%.2f\n",       valid ? temp : 0.0f);
+        printf(">Target:%.2f\n",     sp);
+        printf(">BandLow:%.2f\n",    lo);
+        printf(">BandHigh:%.2f\n",   hi);
+        printf(">RelayTrace:%.2f\n", relayTrace);
         if (valid) printf(">Humidity:%.2f\n", hum);
 
         vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(DISPLAY_TASK_PERIOD_MS));

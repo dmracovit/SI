@@ -1,61 +1,65 @@
 #include "PidController.h"
 
-void PidController_Init(PidState_t *s, float dtSec)
+void PidController_Init(PidController_t *ctx, float dtSec)
 {
-    s->integral  = 0.0f;
-    s->prevError = 0.0f;
-    s->dt        = (dtSec > 0.0f) ? dtSec : 0.001f;
-    s->firstRun  = true;
+    ctx->accumI   = 0.0f;
+    ctx->prevMeas = 0.0f;
+    ctx->dtSec    = (dtSec > 0.0f) ? dtSec : 0.001f;
+    ctx->primed   = 0u;
 }
 
-void PidController_Reset(PidState_t *s)
+void PidController_Reset(PidController_t *ctx)
 {
-    s->integral  = 0.0f;
-    s->prevError = 0.0f;
-    s->firstRun  = true;
+    ctx->accumI   = 0.0f;
+    ctx->prevMeas = 0.0f;
+    ctx->primed   = 0u;
 }
 
-// Discrete PID with conditional-integration anti-windup.
-//   error      = setpoint - measured
-//   derivative = (error - prevError) / dt   (zeroed on first call)
-//   tentative  = integral + error*dt
-//   raw        = Kp*err + Ki*tentative + Kd*derivative
-//   if raw saturates AND error pushes deeper into saturation
-//       → freeze integrator (do not commit tentative)
-//   else
-//       → commit tentative, integral = tentative
-float PidController_Compute(PidState_t *s, float setpoint, float measured,
-                            float kp, float ki, float kd,
-                            float outMin, float outMax)
+// Implementation outline:
+//   P  =  Kp · (sp - meas)
+//   I += Ki · (sp - meas) · dt
+//   D  = -Kd · ( meas[k] - meas[k-1] ) / dt   (derivative on measurement)
+//   raw = P + I + D
+//   out = saturate(raw, outMin, outMax)
+//   I  -= Kt · (raw - out) · dt               (back-calculation anti-windup)
+float PidController_Compute(PidController_t *ctx,
+                             float setpoint, float measurement,
+                             float kp, float ki, float kd,
+                             float outMin, float outMax)
 {
-    float error = setpoint - measured;
+    const float dt    = ctx->dtSec;
+    const float error = setpoint - measurement;
 
-    float derivative = 0.0f;
-    if (!s->firstRun) {
-        derivative = (error - s->prevError) / s->dt;
+    // Proportional term
+    const float P = kp * error;
+
+    // Tentatively accumulate the integral (already weighted by Ki)
+    ctx->accumI += ki * error * dt;
+
+    // Derivative on the measurement — no spike when the setpoint jumps
+    float dMeasure;
+    if (ctx->primed == 0u) {
+        dMeasure       = 0.0f;
+        ctx->primed    = 1u;
+    } else {
+        dMeasure = (measurement - ctx->prevMeas) / dt;
+    }
+    ctx->prevMeas = measurement;
+    const float D = -kd * dMeasure;   // sign flip because of dM/dt vs de/dt
+
+    // Combine
+    const float raw = P + ctx->accumI + D;
+
+    // Saturate the output
+    float out = raw;
+    if (out > outMax) out = outMax;
+    if (out < outMin) out = outMin;
+
+    // Back-calculation: pull integrator back proportionally to the excess
+    const float excess = raw - out;
+    if (excess != 0.0f) {
+        ctx->accumI -= PID_TRACKING_GAIN * excess * dt;
     }
 
-    float tentativeI = s->integral + error * s->dt;
-    float raw = kp * error + ki * tentativeI + kd * derivative;
-
-    bool hitHigh = (raw > outMax);
-    bool hitLow  = (raw < outMin);
-
-    float clamped = raw;
-    if      (hitHigh) clamped = outMax;
-    else if (hitLow)  clamped = outMin;
-
-    // Conditional integration: don't keep winding up against saturation.
-    bool freezeIntegrator =
-        (hitHigh && error > 0.0f) ||
-        (hitLow  && error < 0.0f);
-
-    if (!freezeIntegrator) {
-        s->integral = tentativeI;
-    }
-
-    s->prevError = error;
-    s->firstRun  = false;
-
-    return clamped;
+    return out;
 }

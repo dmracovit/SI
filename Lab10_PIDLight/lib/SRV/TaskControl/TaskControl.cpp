@@ -3,35 +3,43 @@
 #include "PidController.h"
 #include "LedPwmDriver.h"
 
-static PidState_t pid;
+// Setpoint and measurement are tracked in percent (0..100). The PID is
+// evaluated directly in PWM units (0..255) so the saturation limits match
+// the actuator's natural domain — this avoids re-scaling inside the PID.
+#define LIGHT_PCT_TO_PWM   2.55f   // 100 % maps to 255 duty
 
-// PID setpoint is in % (0-100). Light sensor reads in %.
-// PID output range = 0..255 (PWM duty).
-// To convert SP to "PWM space" we scale by 2.55, since 100% light ≈ 255 PWM.
+static PidController_t pidCtx;
 
 void TaskControl_Task(void *pvParameters)
 {
-    PidController_Init(&pid, CONTROL_TASK_PERIOD_MS / 1000.0f);
+    (void)pvParameters;
 
-    TickType_t xLastWakeTime = xTaskGetTickCount();
-    for (;;) {
-        float light = AppState_GetLight();      // 0..100 %
-        float sp    = AppState_GetSetPoint();   // 0..100 %
-        float kp    = AppState_GetKp();
-        float ki    = AppState_GetKi();
-        float kd    = AppState_GetKd();
+    const float dtSec = (float)CONTROL_TASK_PERIOD_MS / 1000.0f;
+    PidController_Init(&pidCtx, dtSec);
 
-        // Convert setpoint and measurement to PWM scale (0..255)
-        float spPwm   = sp    * 2.55f;
-        float measPwm = light * 2.55f;
+    TickType_t cycleStart = xTaskGetTickCount();
 
-        float out = PidController_Compute(&pid, spPwm, measPwm,
-                                          kp, ki, kd, PWM_MIN, PWM_MAX);
+    for (;;)
+    {
+        // ---- Snapshot inputs (mutex-protected) ----
+        const float lightPct = AppState_GetLight();
+        const float spPct    = AppState_GetSetPoint();
+        const float kp       = AppState_GetKp();
+        const float ki       = AppState_GetKi();
+        const float kd       = AppState_GetKd();
 
-        uint8_t duty = (uint8_t)out;
-        LedPwmDriver_SetDuty(duty);
-        AppState_SetPwmOutput(duty);
+        // ---- Move into PWM domain (0..255) ----
+        const float spDuty   = spPct    * LIGHT_PCT_TO_PWM;
+        const float measDuty = lightPct * LIGHT_PCT_TO_PWM;
 
-        vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(CONTROL_TASK_PERIOD_MS));
+        // ---- Run controller ----
+        const float duty = PidController_Compute(
+            &pidCtx, spDuty, measDuty, kp, ki, kd, PWM_MIN, PWM_MAX);
+
+        const uint8_t pwm = (uint8_t)duty;
+        LedPwmDriver_SetDuty(pwm);
+        AppState_SetPwmOutput(pwm);
+
+        vTaskDelayUntil(&cycleStart, pdMS_TO_TICKS(CONTROL_TASK_PERIOD_MS));
     }
 }
